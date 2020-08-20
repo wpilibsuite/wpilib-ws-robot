@@ -1,6 +1,6 @@
-import WpilibWsRobotBase, { DigitalChannelMode } from "./robot-base";
+import WPILibWSRobotBase, { DigitalChannelMode } from "./robot-base";
 
-export default class DebugRobot extends WpilibWsRobotBase {
+export default class DebugRobot extends WPILibWSRobotBase {
     public readyP(): Promise<void> {
         return Promise.resolve();
     }

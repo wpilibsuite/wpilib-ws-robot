@@ -6,7 +6,7 @@ export enum DigitalChannelMode {
     UNCONFIGURED
 };
 
-export default abstract class WpilibWsRobotBase extends EventEmitter {
+export default abstract class WPILibWSRobotBase extends EventEmitter {
     public abstract readyP(): Promise<void>;
 
     // Identifying information

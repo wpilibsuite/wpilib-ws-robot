@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import { WPILibWSInterface, WPILibWSMessages } from "node-wpilib-ws";
-import WpilibWsRobotBase, { DigitalChannelMode } from "./robot-base";
+import WPILibWSRobotBase, { DigitalChannelMode } from "./robot-base";
 import { mapValue } from "./math-util";
 
 interface IDioModeAndValue {
@@ -8,9 +8,9 @@ interface IDioModeAndValue {
     value: boolean;
 }
 
-export default class WPILibWsEndpoint extends EventEmitter {
+export default class WPILibWSRobotEndpoint extends EventEmitter {
     private _wsInterface: WPILibWSInterface;
-    private _robot: WpilibWsRobotBase;
+    private _robot: WPILibWSRobotBase;
 
     private _readTimer: NodeJS.Timeout;
 
@@ -20,7 +20,7 @@ export default class WPILibWsEndpoint extends EventEmitter {
     private _aoutChannels: Map<number, number> = new Map<number, number>();
     private _pwmChannels: Map<number, number> = new Map<number, number>();
 
-    constructor(iface: WPILibWSInterface, robot: WpilibWsRobotBase) {
+    constructor(iface: WPILibWSInterface, robot: WPILibWSRobotBase) {
         super();
         this._wsInterface = iface;
         this._robot = robot;
@@ -65,7 +65,7 @@ export default class WPILibWsEndpoint extends EventEmitter {
 
     private _handleReadAnalogInputs(): void {
         this._ainChannels.forEach((value, channel) => {
-            const voltage = this._robot.getAnalogInVoltage();
+            const voltage = this._robot.getAnalogInVoltage(channel);
 
             this._wsInterface.analogInUpdateToWpilib(channel, {
                 ">voltage": voltage
