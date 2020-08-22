@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { WPILibWSInterface, WPILibWSMessages } from "node-wpilib-ws";
+import { WPILibWSInterface, WPILibWSMessages, WPILibWSServerConfig, WPILibWSClientConfig, WPILibWebSocketServer, WPILibWebSocketClient } from "node-wpilib-ws";
 import WPILibWSRobotBase, { DigitalChannelMode } from "./robot-base";
 import { mapValue } from "./math-util";
 
@@ -9,6 +9,16 @@ interface IDioModeAndValue {
 }
 
 export default class WPILibWSRobotEndpoint extends EventEmitter {
+    public static createServerEndpoint(robot: WPILibWSRobotBase, config?: WPILibWSServerConfig): WPILibWSRobotEndpoint {
+        const server: WPILibWebSocketServer = new WPILibWebSocketServer(config);
+        return new WPILibWSRobotEndpoint(server, robot);
+    }
+
+    public static createClientEndpoint(robot: WPILibWSRobotBase, config?: WPILibWSClientConfig): WPILibWSRobotEndpoint {
+        const client: WPILibWebSocketClient = new WPILibWebSocketClient(config);
+        return new WPILibWSRobotEndpoint(client, robot);
+    }
+
     private _wsInterface: WPILibWSInterface;
     private _robot: WPILibWSRobotBase;
 
@@ -20,7 +30,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     private _aoutChannels: Map<number, number> = new Map<number, number>();
     private _pwmChannels: Map<number, number> = new Map<number, number>();
 
-    constructor(iface: WPILibWSInterface, robot: WPILibWSRobotBase) {
+    private constructor(iface: WPILibWSInterface, robot: WPILibWSRobotBase) {
         super();
         this._wsInterface = iface;
         this._robot = robot;
