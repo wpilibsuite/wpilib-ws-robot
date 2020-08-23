@@ -136,7 +136,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     }
 
     private _handlePWMEvent(channel: number, payload: WPILibWSMessages.PWMPayload): void {
-        if (this._checkChannelInit<number>(channel, payload["<init"], this._pwmChannels, 0)) {
+        if (!this._checkChannelInit<number>(channel, payload["<init"], this._pwmChannels, 0)) {
             return;
         }
 
