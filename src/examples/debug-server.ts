@@ -1,4 +1,3 @@
-import { WPILibWebSocketServer } from "node-wpilib-ws";
 import WPILibWSRobotEndpoint from "../wpilib-ws-robot-endpoint";
 import DebugRobot from "../debug-robot";
 
@@ -8,4 +7,4 @@ const endpoint: WPILibWSRobotEndpoint = WPILibWSRobotEndpoint.createServerEndpoi
 endpoint.startP()
 .then(() => {
     console.log("Server is up and running");
-})
+});
