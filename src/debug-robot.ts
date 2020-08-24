@@ -32,4 +32,16 @@ export default class DebugRobot extends WPILibWSRobotBase {
     setPWMValue(channel: number, value: number): void {
         console.log(`PWM(${channel}) => ${value}`);
     }
+
+    getEncoderCount(channel: number): number {
+        return 0.0;
+    }
+
+    resetEncoder(channel: number): void {
+        console.log(`Encoder(${channel}) RESET`);
+    }
+
+    setEncoderReverseDirection(channel: number, reverse: boolean): void {
+        console.log(`Encoder(${channel}) ReverseDirection(${reverse})`);
+    }
 }

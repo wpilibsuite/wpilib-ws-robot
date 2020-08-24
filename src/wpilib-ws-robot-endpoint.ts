@@ -8,6 +8,12 @@ interface IDioModeAndValue {
     value: boolean;
 }
 
+interface IEncoderInfo {
+    channelA: number;
+    channelB: number;
+    count: number;
+}
+
 export default class WPILibWSRobotEndpoint extends EventEmitter {
     public static createServerEndpoint(robot: WPILibWSRobotBase, config?: WPILibWSServerConfig): WPILibWSRobotEndpoint {
         const server: WPILibWebSocketServer = new WPILibWebSocketServer(config);
@@ -29,6 +35,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     private _ainChannels: Map<number, number> = new Map<number, number>();
     private _aoutChannels: Map<number, number> = new Map<number, number>();
     private _pwmChannels: Map<number, number> = new Map<number, number>();
+    private _encoderChannels: Map<number, IEncoderInfo> = new Map<number, IEncoderInfo>();
 
     private constructor(iface: WPILibWSInterface, robot: WPILibWSRobotBase) {
         super();
@@ -54,11 +61,13 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         this._wsInterface.on("analogInEvent", this._handleAnalogInEvent.bind(this));
         this._wsInterface.on("analogOutEvent", this._handleAnalogOutEvent.bind(this));
         this._wsInterface.on("pwmEvent", this._handlePWMEvent.bind(this));
+        this._wsInterface.on("encoderEvent", this._handleEncoderEvent.bind(this));
 
         // Handle the polling reads
         this._readTimer = setInterval(() => {
             this._handleReadDigitalInputs();
             this._handleReadAnalogInputs();
+            this._handleReadEncoderInputs();
         }, 50);
     }
 
@@ -82,6 +91,18 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             });
 
             this._ainChannels.set(channel, voltage);
+        });
+    }
+
+    private _handleReadEncoderInputs(): void {
+        this._encoderChannels.forEach((encoderInfo, channel) => {
+            const count = this._robot.getEncoderCount(channel);
+
+            this._wsInterface.encoderUpdateToWpilib(channel, {
+                ">count": count
+            });
+
+            encoderInfo.count = count;
         });
     }
 
@@ -152,6 +173,27 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
 
         if (payload["<raw"] !== undefined) {
             this._robot.setPWMValue(channel, payload["<raw"]);
+        }
+    }
+
+    private _handleEncoderEvent(channel: number, payload: WPILibWSMessages.EncoderPayload): void {
+        if (!this._checkChannelInit<IEncoderInfo>(channel, payload["<init"], this._encoderChannels, {
+            channelA: payload["<channel_a"],
+            channelB: payload["<channel_b"],
+            count: 0
+        })) {
+            return;
+        }
+
+        if (payload["<reset"]) {
+            this._robot.resetEncoder(channel);
+
+            // Also update our local value
+            this._encoderChannels.get(channel).count = 0;
+        }
+
+        if (payload["<reverse_direction"] !== undefined) {
+            this._robot.setEncoderReverseDirection(channel, payload["<reverse_direction"]);
         }
     }
 }

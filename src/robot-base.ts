@@ -20,4 +20,8 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
     public abstract getAnalogInVoltage(channel: number): number;
 
     public abstract setPWMValue(channel: number, value: number): void;
+
+    public abstract getEncoderCount(channel: number): number;
+    public abstract resetEncoder(channel: number): void;
+    public abstract setEncoderReverseDirection(channel: number, reverse: boolean): void;
 }
