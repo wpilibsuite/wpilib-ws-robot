@@ -12,6 +12,11 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
     // Identifying information
     public abstract get descriptor(): string;
 
+    // System level information
+    public getBatteryPercentage(): number {
+        return 0.0;
+    }
+
     public abstract setDigitalChannelMode(channel: number, mode: DigitalChannelMode): void;
     public abstract setDIOValue(channel: number, value: boolean): void;
     public abstract getDIOValue(channel: number): boolean;

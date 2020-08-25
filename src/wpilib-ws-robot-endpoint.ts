@@ -68,6 +68,8 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             this._handleReadDigitalInputs();
             this._handleReadAnalogInputs();
             this._handleReadEncoderInputs();
+
+            this._handleReadBattery();
         }, 50);
     }
 
@@ -104,6 +106,14 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
 
             encoderInfo.count = count;
         });
+    }
+
+    private _handleReadBattery(): void {
+        if (this._robot.getBatteryPercentage() > 0.0) {
+            this._wsInterface.roboRioUpdateToWpilib({
+                ">vin_voltage": this._robot.getBatteryPercentage() * 12.0
+            });
+        }
     }
 
     private _checkChannelInit<T>(channel: number, initMsg: boolean | undefined, channelMap: Map<number, T>, defaultValue: T, ): boolean {
