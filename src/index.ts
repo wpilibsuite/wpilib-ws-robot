@@ -3,3 +3,5 @@ import WPILibWSRobotEndpoint from "./wpilib-ws-robot-endpoint";
 
 export { WPILibWSRobotBase, DigitalChannelMode };
 export { WPILibWSRobotEndpoint };
+
+export { WPILibWSServerConfig, WPILibWSClientConfig } from "node-wpilib-ws";
