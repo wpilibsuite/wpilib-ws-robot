@@ -62,7 +62,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         this._wsInterface.on("analogOutEvent", this._handleAnalogOutEvent.bind(this));
         this._wsInterface.on("pwmEvent", this._handlePWMEvent.bind(this));
         this._wsInterface.on("encoderEvent", this._handleEncoderEvent.bind(this));
-
+        this._wsInterface.on("closeConnection", this._handleCloseConnection.bind(this));
         // Handle the polling reads
         this._readTimer = setInterval(() => {
             this._handleReadDigitalInputs();
@@ -71,6 +71,17 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
 
             this._handleReadBattery();
         }, 50);
+    }
+
+    private _handleCloseConnection(): void {
+        // Need to reset initailize mapping to avoid using stale data
+        this._dioChannels.clear();
+        this._ainChannels.clear();
+        this._aoutChannels.clear();
+        this._stopPWMs();
+        this._pwmChannels.clear();
+        this._resetEncoders();
+        this._encoderChannels.clear();
     }
 
     private _handleReadDigitalInputs(): void {
@@ -166,6 +177,12 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         }
     }
 
+    private _stopPWMs() {
+        this._pwmChannels.forEach((value, channel) => {
+           this._robot.setPWMValue(channel, mapValue(0, -1, 1, 0, 255));
+        });
+    }
+
     private _handlePWMEvent(channel: number, payload: WPILibWSMessages.PWMPayload): void {
         if (!this._checkChannelInit<number>(channel, payload["<init"], this._pwmChannels, 0)) {
             return;
@@ -185,6 +202,12 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             this._robot.setPWMValue(channel, payload["<raw"]);
         }
     }
+
+    private _resetEncoders() {
+        this._encoderChannels.forEach((value, channel) => {
+           this._robot.resetEncoder(channel);
+        });
+    }  
 
     private _handleEncoderEvent(channel: number, payload: WPILibWSMessages.EncoderPayload): void {
         if (!this._checkChannelInit<IEncoderInfo>(channel, payload["<init"], this._encoderChannels, {
