@@ -37,6 +37,8 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     private _pwmChannels: Map<number, number> = new Map<number, number>();
     private _encoderChannels: Map<number, IEncoderInfo> = new Map<number, IEncoderInfo>();
 
+    private _driverStationEnabled: boolean = false;
+
     private constructor(iface: WPILibWSInterface, robot: WPILibWSRobotBase) {
         super();
         this._wsInterface = iface;
@@ -63,6 +65,8 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         this._wsInterface.on("pwmEvent", this._handlePWMEvent.bind(this));
         this._wsInterface.on("encoderEvent", this._handleEncoderEvent.bind(this));
         this._wsInterface.on("closeConnection", this._handleCloseConnection.bind(this));
+        this._wsInterface.on("driverStationEvent", this._handleDriverStationEvent.bind(this));
+
         // Handle the polling reads
         this._readTimer = setInterval(() => {
             this._handleReadDigitalInputs();
@@ -82,6 +86,15 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         this._pwmChannels.clear();
         this._resetEncoders();
         this._encoderChannels.clear();
+    }
+
+    private _handleDriverStationEvent(payload: WPILibWSMessages.DriverStationPayload) : void {
+         if(payload[">enabled"] !== undefined) {
+                this._driverStationEnabled = payload[">enabled"];
+                if(!this._driverStationEnabled) {
+                    this._stopPWMs();
+                }
+         }
     }
 
     private _handleReadDigitalInputs(): void {
@@ -184,7 +197,8 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     }
 
     private _handlePWMEvent(channel: number, payload: WPILibWSMessages.PWMPayload): void {
-        if (!this._checkChannelInit<number>(channel, payload["<init"], this._pwmChannels, 0)) {
+
+        if (!this._checkChannelInit<number>(channel, payload["<init"], this._pwmChannels, 0) || !this._driverStationEnabled) {
             return;
         }
 

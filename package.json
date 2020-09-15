@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/bb-frc-workshops/wpilib-ws-robot#readme",
   "dependencies": {
-    "node-wpilib-ws": "0.0.4"
+    "node-wpilib-ws": "0.0.5"
   },
   "files": [
     "dist/**/*"
