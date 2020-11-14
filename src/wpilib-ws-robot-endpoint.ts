@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { WPILibWSInterface, WPILibWSMessages, WPILibWSServerConfig, WPILibWSClientConfig, WPILibWebSocketServer, WPILibWebSocketClient } from "node-wpilib-ws";
+import { WPILibWSInterface, WPILibWSMessages, WPILibWSServerConfig, WPILibWSClientConfig, WPILibWebSocketServer, WPILibWebSocketClient } from "@wpilib/node-wpilib-ws";
 import WPILibWSRobotBase, { DigitalChannelMode } from "./robot-base";
 import { mapValue } from "./math-util";
 
@@ -221,7 +221,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         this._encoderChannels.forEach((value, channel) => {
            this._robot.resetEncoder(channel);
         });
-    }  
+    }
 
     private _handleEncoderEvent(channel: number, payload: WPILibWSMessages.EncoderPayload): void {
         if (!this._checkChannelInit<IEncoderInfo>(channel, payload["<init"], this._encoderChannels, {

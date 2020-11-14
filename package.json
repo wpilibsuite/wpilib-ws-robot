@@ -1,5 +1,5 @@
 {
-  "name": "wpilib-ws-robot",
+  "name": "@wpilib/wpilib-ws-robot",
   "version": "0.0.7",
   "description": "Base library for a WPILib WebSocket robot (Client/Server implementations)",
   "main": "dist/index.js",
@@ -7,6 +7,9 @@
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
+    "version-minor": "npm version minor -m \"Update version to %s\"",
+    "version-patch": "npm version patch -m \"Update version to %s\"",
+    "postversion": "git push && git push --tags",
     "demo-server": "npm run build && node dist/examples/debug-server.js"
   },
   "repository": {
@@ -21,7 +24,7 @@
   },
   "homepage": "https://github.com/bb-frc-workshops/wpilib-ws-robot#readme",
   "dependencies": {
-    "node-wpilib-ws": "0.0.5"
+    "@wpilib/node-wpilib-ws": "0.0.5"
   },
   "files": [
     "dist/**/*"
