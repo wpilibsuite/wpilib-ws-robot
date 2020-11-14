@@ -51,7 +51,9 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             .then(() => {
                 console.log("WebSocket Interface Ready");
             })
-            .then(this._robot.readyP)
+            .then(() => {
+                return this._robot.readyP();
+            })
             .then(() => {
                 console.log(`Robot (${this._robot.descriptor}) is ready`);
             })
