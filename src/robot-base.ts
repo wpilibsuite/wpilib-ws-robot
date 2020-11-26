@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import SimDevice from "./sim-device";
 
 export enum DigitalChannelMode {
     INPUT,
@@ -12,9 +13,45 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
     // Identifying information
     public abstract get descriptor(): string;
 
+    // List of SimDevices supported by this robot
+    protected _simDevices: Map<string, SimDevice> = new Map<string, SimDevice>();
+
     // System level information
     public getBatteryPercentage(): number {
         return 0.0;
+    }
+
+    /**
+     * Register a new SimDevice on this robot
+     * @param deviceName
+     * @param deviceChannel
+     * @param device
+     */
+    protected registerSimDevice(device: SimDevice) {
+        const deviceIdent = device.name + (device.channel !== null ? `[${device.channel}]` : "");
+        this._simDevices.set(deviceIdent, device);
+    }
+
+    /**
+     * Get a specific registered SimDevice
+     * @param deviceName
+     * @param deviceChannel
+     */
+    public getSimDevice(deviceName: string, deviceChannel: number | null): SimDevice {
+        const deviceIdent = deviceName + (deviceChannel !== null ? `[${deviceChannel}]` : "");
+        return this._simDevices.get(deviceIdent);
+    }
+
+    /**
+     * Get a list of all registered SimDevice-s
+     */
+    public getAllSimDevices(): SimDevice[] {
+        const devices: SimDevice[] = [];
+        this._simDevices.forEach(device => {
+            devices.push(device);
+        });
+
+        return devices;
     }
 
     public abstract setDigitalChannelMode(channel: number, mode: DigitalChannelMode): void;

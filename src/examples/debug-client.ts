@@ -1,5 +1,5 @@
 import WPILibWSRobotEndpoint from "../wpilib-ws-robot-endpoint";
-import DebugRobot from "../debug-robot";
+import DebugRobot from "./debug-robot";
 
 const robot: DebugRobot = new DebugRobot();
 
