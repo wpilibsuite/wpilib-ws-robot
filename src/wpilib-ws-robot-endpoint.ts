@@ -15,6 +15,19 @@ interface IEncoderInfo {
     count: number;
 }
 
+interface channelData {
+    default: number;
+    current: number;
+}
+
+type dsMode = {
+    ">autonomous": boolean;
+    ">test": boolean;
+}
+
+// PWMs range from 0 - 255, where 0 is reverse full speed and 255 is foward full speed. The difference is no movement
+const PWM_NO_MOVEMENT : number = 127.5;
+
 export default class WPILibWSRobotEndpoint extends EventEmitter {
     public static createServerEndpoint(robot: WPILibWSRobotBase, config?: WPILibWSServerConfig): WPILibWSRobotEndpoint {
         const server: WPILibWebSocketServer = new WPILibWebSocketServer(config);
@@ -35,16 +48,19 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     private _dioChannels: Map<number, IDioModeAndValue> = new Map<number, IDioModeAndValue>();
     private _ainChannels: Map<number, number> = new Map<number, number>();
     private _aoutChannels: Map<number, number> = new Map<number, number>();
-    private _pwmChannels: Map<number, number> = new Map<number, number>();
+    private _pwmChannels: Map<number, channelData> = new Map<number, channelData>();
     private _encoderChannels: Map<number, IEncoderInfo> = new Map<number, IEncoderInfo>();
     private _simDeviceFields: Map<string, Map<string, any>> = new Map<string, Map<string, any>>();
+    private _dsMode : dsMode;
 
     private _driverStationEnabled: boolean = false;
+
 
     private constructor(iface: WPILibWSInterface, robot: WPILibWSRobotBase) {
         super();
         this._wsInterface = iface;
         this._robot = robot;
+        this._dsMode = {">autonomous":false,">test":false};
     }
 
     public startP(): Promise<void> {
@@ -83,8 +99,9 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         }, 50);
     }
 
+    
+    // Upon close, avoid using stale data on next run by clearing all channel data
     private _handleCloseConnection(): void {
-        // Need to reset initailize mapping to avoid using stale data
         this._dioChannels.clear();
         this._ainChannels.clear();
         this._aoutChannels.clear();
@@ -95,12 +112,31 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     }
 
     private _handleDriverStationEvent(payload: WPILibWSMessages.DriverStationPayload) : void {
-         if(payload[">enabled"] !== undefined) {
-                this._driverStationEnabled = payload[">enabled"];
+        if(payload[">enabled"] !== undefined) {
+            this._driverStationEnabled = payload[">enabled"];
                 if(!this._driverStationEnabled) {
-                    this._stopPWMs();
+                    this._pausePWMs();
+                } else {
+                    this._resumePWMs();
                 }
-         }
+        }
+
+        if(this._checkModeChange(payload)) {
+            this._stopPWMs();
+        }
+    }
+
+    // DS sends fields '>autonomous' and '>test', so need to check both to know if mode changed. 
+    private _checkModeChange(payload: WPILibWSMessages.DriverStationPayload) {
+        let modeChange : boolean = false;
+        if(payload[">autonomous"] !== undefined && this._dsMode[">autonomous"] == payload[">autonomous"]) {
+            modeChange = true;
+            this._dsMode[">autonomous"] = payload[">autonomous"];
+        } else if(payload[">test"] !== undefined && this._dsMode[">test"] == payload[">test"]) {
+            modeChange = true;
+            this._dsMode[">test"] = payload[">test"];
+        }
+        return modeChange;
     }
 
     private _handleReadDigitalInputs(): void {
@@ -250,30 +286,50 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         }
     }
 
-    private _stopPWMs() {
-        this._pwmChannels.forEach((value, channel) => {
-           this._robot.setPWMValue(channel, mapValue(0, -1, 1, 0, 255));
+    private _pausePWMs() {
+        this._pwmChannels.forEach((data, channel) => {
+           this._robot.setPWMValue(channel, PWM_NO_MOVEMENT);
         });
     }
 
+    private _resumePWMs() {
+        this._pwmChannels.forEach((data, channel) => {
+           this._robot.setPWMValue(channel, data.current);
+        });
+    }
+
+    private _stopPWMs() {
+        this._pwmChannels.forEach((data, channel) => {
+            this._pwmChannels.get(channel).current = PWM_NO_MOVEMENT;
+            this._robot.setPWMValue(channel, PWM_NO_MOVEMENT);
+         });
+    }
+
+
     private _handlePWMEvent(channel: number, payload: WPILibWSMessages.PWMPayload): void {
 
-        if (!this._checkChannelInit<number>(channel, payload["<init"], this._pwmChannels, 0) || !this._driverStationEnabled) {
+        if (!this._checkChannelInit<channelData>(channel, payload["<init"], this._pwmChannels, {default : PWM_NO_MOVEMENT,current : PWM_NO_MOVEMENT}) || !this._driverStationEnabled) {
             return;
         }
 
+        let pwmValue : number = undefined;
         if (payload["<speed"] !== undefined) {
             // Speed is [-1, 1] so we need to convert to [0,255]
-            this._robot.setPWMValue(channel, mapValue(payload["<speed"], -1, 1, 0, 255));
+            pwmValue = mapValue(payload["<speed"], -1, 1, 0, 255);
         }
 
         if (payload["<position"] !== undefined) {
             // Position is [0, 1], so we need to convert to [0,255]
-            this._robot.setPWMValue(channel, mapValue(payload["<position"], 0, 1, 0, 255));
+            pwmValue = mapValue(payload["<position"], 0, 1, 0, 255);
         }
 
         if (payload["<raw"] !== undefined) {
-            this._robot.setPWMValue(channel, payload["<raw"]);
+            pwmValue = payload["<raw"];
+        }
+
+        if(pwmValue != undefined) {
+            this._pwmChannels.get(channel).current = pwmValue;
+            this._robot.setPWMValue(channel, pwmValue);
         }
     }
 
