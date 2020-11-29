@@ -1,6 +1,37 @@
-import WPILibWSRobotBase, { DigitalChannelMode } from "./robot-base";
+import WPILibWSRobotBase, { DigitalChannelMode } from "../robot-base";
+import SimAccelerometer from "./debug-accelerometer";
 
 export default class DebugRobot extends WPILibWSRobotBase {
+    private _simAccel: SimAccelerometer = new SimAccelerometer();
+
+    constructor() {
+        super();
+
+        this.registerSimDevice(this._simAccel);
+
+        let delta: number = 0.1;
+        let accelVal: number = -2;
+        let count = 0;
+        setInterval(() => {
+            this._simAccel.x = accelVal;
+            this._simAccel.y = Math.sin(count) * 2;
+            this._simAccel.z = Math.cos(count) * 2;
+
+            accelVal += delta;
+            if (accelVal > 2) {
+                accelVal = 2;
+                delta = -delta;
+            }
+
+            if (accelVal < -2) {
+                accelVal = -2;
+                delta = -delta;
+            }
+
+            count++;
+        }, 100);
+    }
+
     public readyP(): Promise<void> {
         return Promise.resolve();
     }

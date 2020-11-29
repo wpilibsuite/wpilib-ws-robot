@@ -2,6 +2,7 @@ import { EventEmitter } from "events";
 import { WPILibWSInterface, WPILibWSMessages, WPILibWSServerConfig, WPILibWSClientConfig, WPILibWebSocketServer, WPILibWebSocketClient } from "@wpilib/node-wpilib-ws";
 import WPILibWSRobotBase, { DigitalChannelMode } from "./robot-base";
 import { mapValue } from "./math-util";
+import SimDevice, { FieldDirection, fieldNameAndDirection } from "./sim-device";
 
 interface IDioModeAndValue {
     mode: DigitalChannelMode;
@@ -36,6 +37,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     private _aoutChannels: Map<number, number> = new Map<number, number>();
     private _pwmChannels: Map<number, number> = new Map<number, number>();
     private _encoderChannels: Map<number, IEncoderInfo> = new Map<number, IEncoderInfo>();
+    private _simDeviceFields: Map<string, Map<string, any>> = new Map<string, Map<string, any>>();
 
     private _driverStationEnabled: boolean = false;
 
@@ -68,6 +70,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         this._wsInterface.on("encoderEvent", this._handleEncoderEvent.bind(this));
         this._wsInterface.on("closeConnection", this._handleCloseConnection.bind(this));
         this._wsInterface.on("driverStationEvent", this._handleDriverStationEvent.bind(this));
+        this._wsInterface.on("simDevicesEvent", this._handleSimDevicesEvent.bind(this));
 
         // Handle the polling reads
         this._readTimer = setInterval(() => {
@@ -76,6 +79,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             this._handleReadEncoderInputs();
 
             this._handleReadBattery();
+            this._handleReadSimDevices();
         }, 50);
     }
 
@@ -140,6 +144,60 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
                 ">vin_voltage": this._robot.getBatteryPercentage() * 12.0
             });
         }
+    }
+
+    /**
+     * Read field values from all registered SimDevices
+     *
+     * This method will be run periodically to fetch new data from any
+     * SimDevices that are registered on the robot. Each SimDevice on
+     * the robot is responsible for keeping its values up-to-date, and
+     * this method will query the latest set of values, and send it over
+     * the WebSocket connection to WPILib robot code
+     */
+    private _handleReadSimDevices(): void {
+        this._robot.getAllSimDevices().forEach(device => {
+            const deviceUpdates: {[key: string]: any} = {};
+
+            const deviceIdent = device.name + (device.channel !== null ? `[${device.channel}]` : "");
+            if (!this._simDeviceFields.has(deviceIdent)) {
+                this._simDeviceFields.set(deviceIdent, new Map<string, any>());
+            }
+
+            const deviceFields = this._simDeviceFields.get(deviceIdent);
+
+            // Read from each registered field on the SimDevice
+            device.getFieldsAsIdents().forEach(fieldIdent => {
+                const fieldNameAndDir = fieldNameAndDirection(fieldIdent);
+
+                // If this is the first time we are seeing this field...
+                if (!deviceFields.has(fieldIdent)) {
+                    deviceFields.set(fieldIdent, device.getValue(fieldIdent));
+
+                    if (fieldNameAndDir.direction === FieldDirection.BIDIR ||
+                        fieldNameAndDir.direction === FieldDirection.INPUT_TO_ROBOT_CODE) {
+                        deviceUpdates[fieldIdent] = device.getValue(fieldIdent);
+                    }
+                }
+                else {
+                    const prevValue = deviceFields.get(fieldIdent);
+
+                    // If the value has changed from the last time
+                    if (device.getValue(fieldIdent) !== prevValue) {
+                        deviceFields.set(fieldIdent, device.getValue(fieldIdent));
+
+                        if (fieldNameAndDir.direction === FieldDirection.BIDIR ||
+                            fieldNameAndDir.direction === FieldDirection.INPUT_TO_ROBOT_CODE) {
+                            deviceUpdates[fieldIdent] = device.getValue(fieldIdent);
+                        }
+                    }
+                }
+            });
+
+            if (Object.keys(deviceUpdates).length > 0) {
+                this._wsInterface.simDevicesUpdateToWpilib(device.name, device.channel, deviceUpdates);
+            }
+        });
     }
 
     private _checkChannelInit<T>(channel: number, initMsg: boolean | undefined, channelMap: Map<number, T>, defaultValue: T, ): boolean {
@@ -244,5 +302,16 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         if (payload["<reverse_direction"] !== undefined) {
             this._robot.setEncoderReverseDirection(channel, payload["<reverse_direction"]);
         }
+    }
+
+    private _handleSimDevicesEvent(deviceName: string, deviceChannel: number | null, payload: WPILibWSMessages.SimDevicesPayload): void {
+        const simDevice: SimDevice = this._robot.getSimDevice(deviceName, deviceChannel);
+        if (!simDevice) {
+            return;
+        }
+
+        Object.keys(payload).forEach(key => {
+            simDevice.setValue(key, payload[key]);
+        });
     }
 }
