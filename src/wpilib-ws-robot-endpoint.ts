@@ -37,7 +37,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     private _aoutChannels: Map<number, number> = new Map<number, number>();
     private _pwmChannels: Map<number, number> = new Map<number, number>();
     private _encoderChannels: Map<number, IEncoderInfo> = new Map<number, IEncoderInfo>();
-    private _simDevices: Map<string, Map<string, any>> = new Map<string, Map<string, any>>();
+    private _simDeviceFields: Map<string, Map<string, any>> = new Map<string, Map<string, any>>();
 
     private _driverStationEnabled: boolean = false;
 
@@ -146,23 +146,37 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         }
     }
 
+    /**
+     * Read field values from all registered SimDevices
+     *
+     * This method will be run periodically to fetch new data from any
+     * SimDevices that are registered on the robot. Each SimDevice on
+     * the robot is responsible for keeping its values up-to-date, and
+     * this method will query the latest set of values, and send it over
+     * the WebSocket connection to WPILib robot code
+     */
     private _handleReadSimDevices(): void {
         this._robot.getAllSimDevices().forEach(device => {
             const deviceUpdates: {[key: string]: any} = {};
 
             const deviceIdent = device.name + (device.channel !== null ? `[${device.channel}]` : "");
-            if (!this._simDevices.has(deviceIdent)) {
-                this._simDevices.set(deviceIdent, new Map<string, any>());
+            if (!this._simDeviceFields.has(deviceIdent)) {
+                this._simDeviceFields.set(deviceIdent, new Map<string, any>());
             }
 
-            const deviceFields = this._simDevices.get(deviceIdent);
+            const deviceFields = this._simDeviceFields.get(deviceIdent);
+
+            // Read from each registered field on the SimDevice
             device.getFieldsAsIdents().forEach(fieldIdent => {
+                // If this is the first time we are seeing this field...
                 if (!deviceFields.has(fieldIdent)) {
                     deviceFields.set(fieldIdent, device.getValue(fieldIdent));
                     deviceUpdates[fieldIdent] = device.getValue(fieldIdent);
                 }
                 else {
                     const prevValue = deviceFields.get(fieldIdent);
+
+                    // If the value has changed from the last time
                     if (device.getValue(fieldIdent) !== prevValue) {
                         deviceFields.set(fieldIdent, device.getValue(fieldIdent));
                         deviceUpdates[fieldIdent] = device.getValue(fieldIdent);
