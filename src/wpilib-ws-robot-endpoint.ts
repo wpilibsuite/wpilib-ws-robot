@@ -16,8 +16,8 @@ interface IEncoderInfo {
 }
 
 interface channelData {
-    default: number;
-    current: number;
+    defaultValue: number;
+    currentValue: number;
 }
 
 type dsMode = {
@@ -26,7 +26,7 @@ type dsMode = {
 }
 
 // PWMs range from 0 - 255, where 0 is reverse full speed and 255 is foward full speed. The difference is no movement
-const PWM_NO_MOVEMENT : number = 127.5;
+const PWM_NO_MOVEMENT: number = 127.5;
 
 export default class WPILibWSRobotEndpoint extends EventEmitter {
     public static createServerEndpoint(robot: WPILibWSRobotBase, config?: WPILibWSServerConfig): WPILibWSRobotEndpoint {
@@ -60,7 +60,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         super();
         this._wsInterface = iface;
         this._robot = robot;
-        this._dsMode = {">autonomous":false,">test":false};
+        this._dsMode = {">autonomous": false,">test": false};
     }
 
     public startP(): Promise<void> {
@@ -294,13 +294,13 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
 
     private _resumePWMs() {
         this._pwmChannels.forEach((data, channel) => {
-           this._robot.setPWMValue(channel, data.current);
+           this._robot.setPWMValue(channel, data.currentValue);
         });
     }
 
     private _stopPWMs() {
         this._pwmChannels.forEach((data, channel) => {
-            this._pwmChannels.get(channel).current = PWM_NO_MOVEMENT;
+            this._pwmChannels.get(channel).currentValue = PWM_NO_MOVEMENT;
             this._robot.setPWMValue(channel, PWM_NO_MOVEMENT);
          });
     }
@@ -308,7 +308,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
 
     private _handlePWMEvent(channel: number, payload: WPILibWSMessages.PWMPayload): void {
 
-        if (!this._checkChannelInit<channelData>(channel, payload["<init"], this._pwmChannels, {default : PWM_NO_MOVEMENT,current : PWM_NO_MOVEMENT}) || !this._driverStationEnabled) {
+        if (!this._checkChannelInit<channelData>(channel, payload["<init"], this._pwmChannels, {defaultValue: PWM_NO_MOVEMENT,currentValue: PWM_NO_MOVEMENT}) || !this._driverStationEnabled) {
             return;
         }
 
@@ -328,7 +328,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         }
 
         if(pwmValue != undefined) {
-            this._pwmChannels.get(channel).current = pwmValue;
+            this._pwmChannels.get(channel).currentValue = pwmValue;
             this._robot.setPWMValue(channel, pwmValue);
         }
     }
