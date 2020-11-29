@@ -2,7 +2,7 @@ import { EventEmitter } from "events";
 import { WPILibWSInterface, WPILibWSMessages, WPILibWSServerConfig, WPILibWSClientConfig, WPILibWebSocketServer, WPILibWebSocketClient } from "@wpilib/node-wpilib-ws";
 import WPILibWSRobotBase, { DigitalChannelMode } from "./robot-base";
 import { mapValue } from "./math-util";
-import SimDevice from "./sim-device";
+import SimDevice, { FieldDirection, fieldNameAndDirection } from "./sim-device";
 
 interface IDioModeAndValue {
     mode: DigitalChannelMode;
@@ -168,10 +168,16 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
 
             // Read from each registered field on the SimDevice
             device.getFieldsAsIdents().forEach(fieldIdent => {
+                const fieldNameAndDir = fieldNameAndDirection(fieldIdent);
+
                 // If this is the first time we are seeing this field...
                 if (!deviceFields.has(fieldIdent)) {
                     deviceFields.set(fieldIdent, device.getValue(fieldIdent));
-                    deviceUpdates[fieldIdent] = device.getValue(fieldIdent);
+
+                    if (fieldNameAndDir.direction === FieldDirection.BIDIR ||
+                        fieldNameAndDir.direction === FieldDirection.INPUT_TO_ROBOT_CODE) {
+                        deviceUpdates[fieldIdent] = device.getValue(fieldIdent);
+                    }
                 }
                 else {
                     const prevValue = deviceFields.get(fieldIdent);
@@ -179,7 +185,11 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
                     // If the value has changed from the last time
                     if (device.getValue(fieldIdent) !== prevValue) {
                         deviceFields.set(fieldIdent, device.getValue(fieldIdent));
-                        deviceUpdates[fieldIdent] = device.getValue(fieldIdent);
+
+                        if (fieldNameAndDir.direction === FieldDirection.BIDIR ||
+                            fieldNameAndDir.direction === FieldDirection.INPUT_TO_ROBOT_CODE) {
+                            deviceUpdates[fieldIdent] = device.getValue(fieldIdent);
+                        }
                     }
                 }
             });

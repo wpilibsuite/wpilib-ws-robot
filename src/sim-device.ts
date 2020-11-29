@@ -39,7 +39,7 @@ function fieldWithDirectionPrefix(field: string, dir: FieldDirection): string {
     return (dirPrefix(dir) + field);
 }
 
-interface FieldNameAndDirection {
+export interface FieldNameAndDirection {
     field: string;
     direction: FieldDirection;
 }
@@ -48,7 +48,7 @@ interface FieldNameAndDirection {
  * Given a field name or identifier string, return the field name and direction
  * @param str
  */
-function fieldNameAndDirection(str: string): FieldNameAndDirection {
+export function fieldNameAndDirection(str: string): FieldNameAndDirection {
     if (str.indexOf("<>") === 0) {
         return {
             field: str.substr(2),
