@@ -348,6 +348,15 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             return;
         }
 
+        // We need to respect the channel numbers here too and report
+        // it to the robot along with which encoder channel it is
+        if (payload["<init"]) {
+            const encoderInfo = this._encoderChannels.get(channel);
+
+            // This was the init message - register with the robot
+            this._robot.registerEncoder(channel, encoderInfo.channelA, encoderInfo.channelB);
+        }
+
         if (payload["<reset"]) {
             this._robot.resetEncoder(channel);
 

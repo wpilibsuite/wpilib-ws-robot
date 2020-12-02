@@ -63,6 +63,18 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
 
     public abstract setPWMValue(channel: number, value: number): void;
 
+    /**
+     * Register an encoder
+     *
+     * This method will get called when a new encoder is registered from WPILib
+     * via the WebSocket interface. The implementation in WPILibWSRobotBase is
+     * a no-op as individual robot subclasses can decide if they want to handle
+     * the registration event
+     * @param encoderChannel Virtual channel of the encoder registered with the HAL
+     * @param chA DigitalInput channel for quadrature channel A
+     * @param chB DigitalInput channel for quadrature channel B
+     */
+    public registerEncoder(encoderChannel: number, chA: number, chB: number): void {}
     public abstract getEncoderCount(channel: number): number;
     public abstract resetEncoder(channel: number): void;
     public abstract setEncoderReverseDirection(channel: number, reverse: boolean): void;
