@@ -84,6 +84,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         this._wsInterface.on("analogOutEvent", this._handleAnalogOutEvent.bind(this));
         this._wsInterface.on("pwmEvent", this._handlePWMEvent.bind(this));
         this._wsInterface.on("encoderEvent", this._handleEncoderEvent.bind(this));
+        this._wsInterface.on("openConnection", this._handleOpenConnection.bind(this));
         this._wsInterface.on("closeConnection", this._handleCloseConnection.bind(this));
         this._wsInterface.on("driverStationEvent", this._handleDriverStationEvent.bind(this));
         this._wsInterface.on("simDevicesEvent", this._handleSimDevicesEvent.bind(this));
@@ -99,7 +100,10 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         }, 50);
     }
 
-    
+    private _handleOpenConnection(): void {
+        this._robot.onWSConnection();
+    }
+
     // Upon close, avoid using stale data on next run by clearing all channel data
     private _handleCloseConnection(): void {
         this._dioChannels.clear();
@@ -109,6 +113,8 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         this._pwmChannels.clear();
         this._resetEncoders();
         this._encoderChannels.clear();
+
+        this._robot.onWSDisconnection();
     }
 
     private _handleDriverStationEvent(payload: WPILibWSMessages.DriverStationPayload) : void {
@@ -126,7 +132,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         }
     }
 
-    // DS sends fields '>autonomous' and '>test', so need to check both to know if mode changed. 
+    // DS sends fields '>autonomous' and '>test', so need to check both to know if mode changed.
     private _checkModeChange(payload: WPILibWSMessages.DriverStationPayload) {
         let modeChange : boolean = false;
         if(payload[">autonomous"] !== undefined && this._dsMode[">autonomous"] == payload[">autonomous"]) {
