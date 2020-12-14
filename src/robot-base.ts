@@ -78,4 +78,9 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
     public abstract getEncoderCount(channel: number): number;
     public abstract resetEncoder(channel: number): void;
     public abstract setEncoderReverseDirection(channel: number, reverse: boolean): void;
+
+    // Handlers for WS connection/disconnection events. These are no-ops here
+    // as individual robot subclasses can decide if they want to handle the events
+    public onWSConnection(): void {};
+    public onWSDisconnection(): void {};
 }
