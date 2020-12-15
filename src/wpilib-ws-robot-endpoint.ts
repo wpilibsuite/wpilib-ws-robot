@@ -78,6 +78,17 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             .then(this._hookupEvents.bind(this));
     }
 
+    public set wsVerboseMode(mode: boolean) {
+        if (this._wsInterface.verboseMode !== mode) {
+            console.log(`Switching WS Verbose Mode to ${mode}`);
+        }
+        this._wsInterface.verboseMode = mode;
+    }
+
+    public get wsVerboseMode(): boolean {
+        return this._wsInterface.verboseMode;
+    }
+
     private _hookupEvents(): void {
         this._wsInterface.on("dioEvent", this._handleDioEvent.bind(this));
         this._wsInterface.on("analogInEvent", this._handleAnalogInEvent.bind(this));
@@ -287,8 +298,8 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             return;
         }
 
-        if (payload["<votage"] !== undefined) {
-            this._robot.setAnalogOutVoltage(channel, payload["<votage"]);
+        if (payload["<voltage"] !== undefined) {
+            this._robot.setAnalogOutVoltage(channel, payload["<voltage"]);
         }
     }
 
