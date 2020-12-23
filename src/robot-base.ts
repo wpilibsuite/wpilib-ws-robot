@@ -1,4 +1,6 @@
 import { EventEmitter } from "events";
+import RobotAccelerometer from "./robot-accelerometer";
+import RobotGyro from "./robot-gyro";
 import SimDevice from "./sim-device";
 
 export enum DigitalChannelMode {
@@ -15,6 +17,12 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
 
     // List of SimDevices supported by this robot
     protected _simDevices: Map<string, SimDevice> = new Map<string, SimDevice>();
+
+    // List of Accelerometers supported by this robot
+    protected _accelerometers: Map<string, RobotAccelerometer> = new Map<string, RobotAccelerometer>();
+
+    // List of Gyros supported by this robot
+    protected _gyros: Map<string, RobotGyro> = new Map<string, RobotGyro>();
 
     // System level information
     public getBatteryPercentage(): number {
@@ -52,6 +60,44 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
         });
 
         return devices;
+    }
+
+    protected registerAccelerometer(accel: RobotAccelerometer) {
+        const deviceIdent = accel.name + (accel.channel !== null ? `[${accel.channel}]` : "");
+        this._accelerometers.set(deviceIdent, accel);
+    }
+
+    public getAccelerometer(deviceName: string, deviceChannel: number | null): RobotAccelerometer {
+        const deviceIdent = deviceName + (deviceChannel !== null ? `[${deviceChannel}]` : "");
+        return this._accelerometers.get(deviceIdent);
+    }
+
+    public getAllAccelerometers(): RobotAccelerometer[] {
+        const accels: RobotAccelerometer[] = [];
+        this._accelerometers.forEach(accel => {
+            accels.push(accel);
+        });
+
+        return accels;
+    }
+
+    protected registerGyro(gyro: RobotGyro) {
+        const deviceIdent = gyro.name + (gyro.channel !== null ? `[${gyro.channel}]` : "");
+        this._gyros.set(deviceIdent, gyro);
+    }
+
+    public getGyro(deviceName: string, deviceChannel: number | null): RobotGyro {
+        const deviceIdent = deviceName + (deviceChannel !== null ? `[${deviceChannel}]` : "");
+        return this._gyros.get(deviceIdent);
+    }
+
+    public getAllGyros(): RobotGyro[] {
+        const gyros: RobotGyro[] = [];
+        this._gyros.forEach(gyro => {
+            gyros.push(gyro);
+        });
+
+        return gyros;
     }
 
     public abstract setDigitalChannelMode(channel: number, mode: DigitalChannelMode): void;

@@ -3,10 +3,27 @@ import { WPILibWSInterface, WPILibWSMessages, WPILibWSServerConfig, WPILibWSClie
 import WPILibWSRobotBase, { DigitalChannelMode } from "./robot-base";
 import { mapValue } from "./math-util";
 import SimDevice, { FieldDirection, fieldNameAndDirection } from "./sim-device";
+import RobotAccelerometer from "./robot-accelerometer";
+import RobotGyro from "./robot-gyro";
 
 interface IDioModeAndValue {
     mode: DigitalChannelMode;
     value: boolean;
+}
+
+interface IAccelInfo {
+    accelX: number;
+    accelY: number;
+    accelZ: number;
+}
+
+interface IGyroInfo {
+    rateX: number;
+    rateY: number;
+    rateZ: number;
+    angleX: number;
+    angleY: number;
+    angleZ: number;
 }
 
 interface IEncoderInfo {
@@ -53,6 +70,9 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     private _simDeviceFields: Map<string, Map<string, any>> = new Map<string, Map<string, any>>();
     private _dsMode : dsMode;
 
+    private _accelDevices: Map<string, IAccelInfo> = new Map<string, IAccelInfo>();
+    private _gyroDevices: Map<string, IGyroInfo> = new Map<string, IGyroInfo>();
+
     private _driverStationEnabled: boolean = false;
 
 
@@ -90,15 +110,16 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     }
 
     private _hookupEvents(): void {
-        this._wsInterface.on("dioEvent", this._handleDioEvent.bind(this));
+        this._wsInterface.on("accelEvent", this._handleAccelEvent.bind(this));
+        this._wsInterface.on("gyroEvent", this._handleGyroEvent.bind(this));
         this._wsInterface.on("analogInEvent", this._handleAnalogInEvent.bind(this));
-        this._wsInterface.on("analogOutEvent", this._handleAnalogOutEvent.bind(this));
+        this._wsInterface.on("dioEvent", this._handleDioEvent.bind(this));
+        this._wsInterface.on("driverStationEvent", this._handleDriverStationEvent.bind(this));
         this._wsInterface.on("pwmEvent", this._handlePWMEvent.bind(this));
         this._wsInterface.on("encoderEvent", this._handleEncoderEvent.bind(this));
         this._wsInterface.on("openConnection", this._handleOpenConnection.bind(this));
         this._wsInterface.on("closeConnection", this._handleCloseConnection.bind(this));
-        this._wsInterface.on("driverStationEvent", this._handleDriverStationEvent.bind(this));
-        this._wsInterface.on("simDevicesEvent", this._handleSimDevicesEvent.bind(this));
+        this._wsInterface.on("simDeviceEvent", this._handleSimDeviceEvent.bind(this));
 
         // Handle the polling reads
         this._readTimer = setInterval(() => {
@@ -108,6 +129,8 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
 
             this._handleReadBattery();
             this._handleReadSimDevices();
+            this._handleReadAccels();
+            this._handleReadGyros();
         }, 50);
     }
 
@@ -128,41 +151,83 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         this._robot.onWSDisconnection();
     }
 
-    private _handleDriverStationEvent(payload: WPILibWSMessages.DriverStationPayload) : void {
-        if(payload[">enabled"] !== undefined) {
-            this._driverStationEnabled = payload[">enabled"];
-                if(!this._driverStationEnabled) {
-                    this._pausePWMs();
-                } else {
-                    this._resumePWMs();
-                }
-        }
+    private _handleReadAccels(): void {
+        this._robot.getAllAccelerometers().forEach(accelerometer => {
+            const accelUpdates: WPILibWSMessages.AccelPayload = {};
+            const deviceIdent = accelerometer.name + (accelerometer.channel !== null ? `[${accelerometer.channel}]` : "");
+            const storedAccelValues: IAccelInfo = this._accelDevices.get(deviceIdent);
 
-        if(this._checkModeChange(payload)) {
-            this._stopPWMs();
-        }
+            // If the currently looked at accelerometer is un-registered from
+            // robot code, ignore it
+            if (!storedAccelValues) {
+                return;
+            }
+
+            if (accelerometer.accelX !== storedAccelValues.accelX) {
+                storedAccelValues.accelX = accelerometer.accelX;
+                accelUpdates[">x"] = accelerometer.accelX;
+            }
+
+            if (accelerometer.accelY !== storedAccelValues.accelY) {
+                storedAccelValues.accelY = accelerometer.accelY;
+                accelUpdates[">y"] = accelerometer.accelY;
+            }
+
+            if (accelerometer.accelZ !== storedAccelValues.accelZ) {
+                storedAccelValues.accelZ = accelerometer.accelZ;
+                accelUpdates[">z"] = accelerometer.accelZ;
+            }
+
+            if (Object.keys(accelUpdates).length > 0) {
+                this._wsInterface.accelUpdateToWpilib(accelerometer.name, accelerometer.channel, accelUpdates);
+            }
+        });
     }
 
-    // DS sends fields '>autonomous' and '>test', so need to check both to know if mode changed.
-    private _checkModeChange(payload: WPILibWSMessages.DriverStationPayload) {
-        let modeChange : boolean = false;
-        if(payload[">autonomous"] !== undefined && this._dsMode[">autonomous"] == payload[">autonomous"]) {
-            modeChange = true;
-            this._dsMode[">autonomous"] = payload[">autonomous"];
-        } else if(payload[">test"] !== undefined && this._dsMode[">test"] == payload[">test"]) {
-            modeChange = true;
-            this._dsMode[">test"] = payload[">test"];
-        }
-        return modeChange;
-    }
+    private _handleReadGyros(): void {
+        this._robot.getAllGyros().forEach(gyro => {
+            const gyroUpdates: WPILibWSMessages.GyroPayload = {};
+            const deviceIdent = gyro.name + (gyro.channel !== null ? `[${gyro.channel}]` : "");
+            const storedGyroValues: IGyroInfo = this._gyroDevices.get(deviceIdent);
 
-    private _handleReadDigitalInputs(): void {
-        this._dioChannels.forEach((chInfo, channel) => {
-            if (chInfo.mode === DigitalChannelMode.INPUT) {
-                chInfo.value = this._robot.getDIOValue(channel);
-                this._wsInterface.dioUpdateToWpilib(channel, {
-                    "<>value": chInfo.value
-                });
+            // If the currently looked at gyro is un-registered from
+            // robot code, ignore it
+            if (!storedGyroValues) {
+                return;
+            }
+
+            if (gyro.rateX !== storedGyroValues.rateX) {
+                storedGyroValues.rateX = gyro.rateX;
+                gyroUpdates[">rate_x"] = gyro.rateX;
+            }
+
+            if (gyro.rateY !== storedGyroValues.rateY) {
+                storedGyroValues.rateY = gyro.rateY;
+                gyroUpdates[">rate_y"] = gyro.rateY;
+            }
+
+            if (gyro.rateZ !== storedGyroValues.rateZ) {
+                storedGyroValues.rateZ = gyro.rateZ;
+                gyroUpdates[">rate_z"] = gyro.rateZ;
+            }
+
+            if (gyro.angleX !== storedGyroValues.angleX) {
+                storedGyroValues.angleX = gyro.angleX;
+                gyroUpdates[">angle_x"] = gyro.angleX;
+            }
+
+            if (gyro.angleY !== storedGyroValues.angleY) {
+                storedGyroValues.angleY = gyro.angleY;
+                gyroUpdates[">angle_y"] = gyro.angleY;
+            }
+
+            if (gyro.angleZ !== storedGyroValues.angleZ) {
+                storedGyroValues.angleZ = gyro.angleZ;
+                gyroUpdates[">angle_z"] = gyro.angleZ;
+            }
+
+            if (Object.keys(gyroUpdates).length > 0) {
+                this._wsInterface.gyroUpdateToWpilib(gyro.name, gyro.channel, gyroUpdates);
             }
         });
     }
@@ -179,6 +244,32 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         });
     }
 
+    private _handleReadDigitalInputs(): void {
+        this._dioChannels.forEach((chInfo, channel) => {
+            if (chInfo.mode === DigitalChannelMode.INPUT) {
+                chInfo.value = this._robot.getDIOValue(channel);
+                this._wsInterface.dioUpdateToWpilib(channel, {
+                    "<>value": chInfo.value
+                });
+            }
+        });
+    }
+
+    private _handleDriverStationEvent(payload: WPILibWSMessages.DriverStationPayload) : void {
+        if(payload[">enabled"] !== undefined) {
+            this._driverStationEnabled = payload[">enabled"];
+                if(!this._driverStationEnabled) {
+                    this._pausePWMs();
+                } else {
+                    this._resumePWMs();
+                }
+        }
+
+        if(this._checkModeChange(payload)) {
+            this._stopPWMs();
+        }
+    }
+
     private _handleReadEncoderInputs(): void {
         this._encoderChannels.forEach((encoderInfo, channel) => {
             const count = this._robot.getEncoderCount(channel);
@@ -189,6 +280,19 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
 
             encoderInfo.count = count;
         });
+    }
+
+    // DS sends fields '>autonomous' and '>test', so need to check both to know if mode changed.
+    private _checkModeChange(payload: WPILibWSMessages.DriverStationPayload) {
+        let modeChange : boolean = false;
+        if(payload[">autonomous"] !== undefined && this._dsMode[">autonomous"] == payload[">autonomous"]) {
+            modeChange = true;
+            this._dsMode[">autonomous"] = payload[">autonomous"];
+        } else if(payload[">test"] !== undefined && this._dsMode[">test"] == payload[">test"]) {
+            modeChange = true;
+            this._dsMode[">test"] = payload[">test"];
+        }
+        return modeChange;
     }
 
     private _handleReadBattery(): void {
@@ -248,12 +352,12 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             });
 
             if (Object.keys(deviceUpdates).length > 0) {
-                this._wsInterface.simDevicesUpdateToWpilib(device.name, device.channel, deviceUpdates);
+                this._wsInterface.simDeviceUpdateToWpilib(device.name, device.channel, deviceUpdates);
             }
         });
     }
 
-    private _checkChannelInit<T>(channel: number, initMsg: boolean | undefined, channelMap: Map<number, T>, defaultValue: T, ): boolean {
+    private _checkChannelInit<T>(channel: number, initMsg: boolean | undefined, channelMap: Map<number, T>, defaultValue: T): boolean {
         if (!channelMap.has(channel)) {
             if (initMsg) {
                 channelMap.set(channel, defaultValue);
@@ -261,6 +365,49 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         }
 
         return channelMap.has(channel);
+    }
+
+    private _checkDeviceInit<T>(deviceIdent: string, initMsg: boolean | undefined, deviceMap: Map<string, T>, defaultValue: T): boolean {
+        if (!deviceMap.has(deviceIdent)) {
+            if (initMsg) {
+                deviceMap.set(deviceIdent, defaultValue);
+            }
+        }
+
+        return deviceMap.has(deviceIdent);
+    }
+
+    private _handleAccelEvent(deviceName: string, deviceChannel: number |  null, payload: WPILibWSMessages.AccelPayload): void {
+        const deviceIdent: string = deviceName + (deviceChannel !== null ? "[" + deviceChannel + "]" : "");
+        if (!this._checkDeviceInit<IAccelInfo>(deviceIdent, payload["<init"], this._accelDevices, {accelX: 0, accelY: 0, accelZ: 0})) {
+            return;
+        }
+
+        // Pull the accelerometer from the robot
+        const accelerometer: RobotAccelerometer = this._robot.getAccelerometer(deviceName, deviceChannel);
+        if (!accelerometer) {
+            return;
+        }
+
+        if (payload["<range"] !== undefined) {
+            accelerometer.range = payload["<range"];
+        }
+    }
+
+    private _handleGyroEvent(deviceName: string, deviceChannel: number | null, payload: WPILibWSMessages.GyroPayload): void {
+        const deviceIdent: string = deviceName + (deviceChannel !== null ? "[" + deviceChannel + "]" : "");
+        if (!this._checkDeviceInit<IGyroInfo>(deviceIdent, payload["<init"], this._gyroDevices, {rateX: 0, rateY: 0, rateZ: 0, angleX: 0, angleY: 0, angleZ: 0})) {
+            return;
+        }
+
+        const gyro: RobotGyro = this._robot.getGyro(deviceName, deviceChannel);
+        if (!gyro) {
+            return;
+        }
+
+        if (payload["<range"] !== undefined) {
+            gyro.range = payload["<range"];
+        }
     }
 
     private _handleDioEvent(channel: number, payload: WPILibWSMessages.DIOPayload): void {
@@ -290,16 +437,6 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     private _handleAnalogInEvent(channel: number, payload: WPILibWSMessages.AIPayload): void {
         if (!this._checkChannelInit<number>(channel, payload["<init"], this._ainChannels, 0)) {
             return;
-        }
-    }
-
-    private _handleAnalogOutEvent(channel: number, payload: WPILibWSMessages.AOPayload): void {
-        if (!this._checkChannelInit<number>(channel, payload["<init"], this._aoutChannels, 0)) {
-            return;
-        }
-
-        if (payload["<voltage"] !== undefined) {
-            this._robot.setAnalogOutVoltage(channel, payload["<voltage"]);
         }
     }
 
@@ -340,10 +477,6 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             pwmValue = mapValue(payload["<position"], 0, 1, 0, 255);
         }
 
-        if (payload["<raw"] !== undefined) {
-            pwmValue = payload["<raw"];
-        }
-
         if(pwmValue != undefined) {
             this._pwmChannels.get(channel).currentValue = pwmValue;
             this._robot.setPWMValue(channel, pwmValue);
@@ -374,19 +507,9 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             this._robot.registerEncoder(channel, encoderInfo.channelA, encoderInfo.channelB);
         }
 
-        if (payload["<reset"]) {
-            this._robot.resetEncoder(channel);
-
-            // Also update our local value
-            this._encoderChannels.get(channel).count = 0;
-        }
-
-        if (payload["<reverse_direction"] !== undefined) {
-            this._robot.setEncoderReverseDirection(channel, payload["<reverse_direction"]);
-        }
     }
 
-    private _handleSimDevicesEvent(deviceName: string, deviceChannel: number | null, payload: WPILibWSMessages.SimDevicesPayload): void {
+    private _handleSimDeviceEvent(deviceName: string, deviceChannel: number | null, payload: WPILibWSMessages.SimDevicePayload): void {
         const simDevice: SimDevice = this._robot.getSimDevice(deviceName, deviceChannel);
         if (!simDevice) {
             return;
