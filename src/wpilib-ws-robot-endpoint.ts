@@ -75,6 +75,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
 
     private _driverStationEnabled: boolean = false;
 
+    private _pendingDioEvents: Map<number, WPILibWSMessages.DIOPayload> = new Map<number, WPILibWSMessages.DIOPayload>();
 
     private constructor(iface: WPILibWSInterface, robot: WPILibWSRobotBase) {
         super();
@@ -412,10 +413,39 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
 
     private _handleDioEvent(channel: number, payload: WPILibWSMessages.DIOPayload): void {
         if (!this._checkChannelInit<IDioModeAndValue>(channel, payload["<init"], this._dioChannels, { mode: DigitalChannelMode.UNCONFIGURED, value: false })) {
+            // We should save any pre-sent messages and play it back after
+            if (!this._pendingDioEvents.has(channel)) {
+                this._pendingDioEvents.set(channel, {});
+            }
+
+            const pendingEvents = this._pendingDioEvents.get(channel);
+
+            if (payload["<input"] !== undefined) {
+                pendingEvents["<input"] = payload["<input"];
+            }
+
+            if (payload["<>value"] !== undefined) {
+                pendingEvents["<>value"] = payload["<>value"];
+            }
+
             return;
         }
 
         const channelModeAndValue = this._dioChannels.get(channel);
+
+        // Playback any pending DIO events
+        if (this._pendingDioEvents.has(channel)) {
+            const pendingEvents = this._pendingDioEvents.get(channel);
+            if (pendingEvents["<input"] !== undefined && payload["<input"] === undefined) {
+                payload["<input"] = pendingEvents["<input"];
+            }
+
+            if (pendingEvents["<>value"] !== undefined && payload["<>value"] === undefined) {
+                payload["<>value"] = pendingEvents["<>value"];
+            }
+
+            this._pendingDioEvents.delete(channel);
+        }
 
         if (payload["<input"] !== undefined) {
             if (payload["<input"]) {
