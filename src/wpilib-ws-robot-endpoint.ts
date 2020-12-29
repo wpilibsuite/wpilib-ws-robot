@@ -274,9 +274,11 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     private _handleReadEncoderInputs(): void {
         this._encoderChannels.forEach((encoderInfo, channel) => {
             const count = this._robot.getEncoderCount(channel);
+            const period = this._robot.getEncoderPeriod(channel);
 
             this._wsInterface.encoderUpdateToWpilib(channel, {
-                ">count": count
+                ">count": count,
+                ">period": period
             });
 
             encoderInfo.count = count;

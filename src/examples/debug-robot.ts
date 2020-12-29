@@ -68,6 +68,10 @@ export default class DebugRobot extends WPILibWSRobotBase {
         return 0.0;
     }
 
+    getEncoderPeriod(channel: number): number {
+        return Number.MAX_VALUE;
+    }
+
     resetEncoder(channel: number): void {
         console.log(`Encoder(${channel}) RESET`);
     }

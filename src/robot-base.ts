@@ -122,6 +122,7 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
      */
     public registerEncoder(encoderChannel: number, chA: number, chB: number): void {}
     public abstract getEncoderCount(channel: number): number;
+    public abstract getEncoderPeriod(channel: number): number;
     public abstract resetEncoder(channel: number): void;
     public abstract setEncoderReverseDirection(channel: number, reverse: boolean): void;
 
