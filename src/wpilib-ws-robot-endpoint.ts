@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import { WPILibWSInterface, WPILibWSMessages, WPILibWSServerConfig, WPILibWSClientConfig, WPILibWebSocketServer, WPILibWebSocketClient } from "@wpilib/node-wpilib-ws";
+import { WPILibWSInterface, WPILibWSMessages, WPILibWSServerConfig, WPILibWSClientConfig, WPILibWebSocketServer, WPILibWebSocketClient, RemoteConnectionInfo } from "@wpilib/node-wpilib-ws";
 import WPILibWSRobotBase, { DigitalChannelMode } from "./robot-base";
 import { mapValue } from "./math-util";
 import SimDevice, { FieldDirection, fieldNameAndDirection } from "./sim-device";
@@ -135,8 +135,14 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         }, 50);
     }
 
-    private _handleOpenConnection(): void {
-        this._robot.onWSConnection();
+    private _handleOpenConnection(remoteConnInfo?: RemoteConnectionInfo): void {
+        let remoteAddrV4: string | undefined = undefined;
+
+        if (remoteConnInfo && remoteConnInfo.ipv4Address) {
+            remoteAddrV4 = remoteConnInfo.ipv4Address;
+        }
+
+        this._robot.onWSConnection(remoteAddrV4);
     }
 
     // Upon close, avoid using stale data on next run by clearing all channel data
