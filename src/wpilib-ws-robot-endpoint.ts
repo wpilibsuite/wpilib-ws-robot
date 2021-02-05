@@ -266,8 +266,10 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         if(payload[">enabled"] !== undefined) {
             this._driverStationEnabled = payload[">enabled"];
                 if(!this._driverStationEnabled) {
+                    this._robot.onRobotDisabled();
                     this._pausePWMs();
                 } else {
+                    this._robot.onRobotEnabled();
                     this._resumePWMs();
                 }
         }

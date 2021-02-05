@@ -128,6 +128,12 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
 
     // Handlers for WS connection/disconnection events. These are no-ops here
     // as individual robot subclasses can decide if they want to handle the events
-    public onWSConnection(remoteAddrV4?: string): void {};
-    public onWSDisconnection(): void {};
+    public onWSConnection(remoteAddrV4?: string): void {}
+    public onWSDisconnection(): void {}
+
+    // Handlers for robot disable/enable state. Any mode other than "disabled" will be
+    // considered "enabled". These are no-ops here as individual robot subclasses can
+    // decide if they want to handle the events
+    public onRobotDisabled(): void {}
+    public onRobotEnabled(): void {}
 }
