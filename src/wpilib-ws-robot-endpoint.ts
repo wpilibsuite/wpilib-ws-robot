@@ -45,6 +45,9 @@ type dsMode = {
 // PWMs range from 0 - 255, where 0 is reverse full speed and 255 is foward full speed. The difference is no movement
 const PWM_NO_MOVEMENT: number = 127.5;
 
+// Max time between DS packets before a timeout occurs
+const DS_PACKET_TIMEOUT_MS = 500;
+
 export default class WPILibWSRobotEndpoint extends EventEmitter {
     public static createServerEndpoint(robot: WPILibWSRobotBase, config?: WPILibWSServerConfig): WPILibWSRobotEndpoint {
         const server: WPILibWebSocketServer = new WPILibWebSocketServer(config);
@@ -56,10 +59,17 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         return new WPILibWSRobotEndpoint(client, robot);
     }
 
+    public static createMockEndpoint(robot: WPILibWSRobotBase, mockInterface: WPILibWSInterface): WPILibWSRobotEndpoint {
+        return new WPILibWSRobotEndpoint(mockInterface, robot);
+    }
+
     private _wsInterface: WPILibWSInterface;
     private _robot: WPILibWSRobotBase;
 
     private _readTimer: NodeJS.Timeout;
+
+    private _dsPacketTimeout: NodeJS.Timeout;
+    private _inDsPacketTimeoutMode = true;
 
     // Management of port types
     private _dioChannels: Map<number, IDioModeAndValue> = new Map<number, IDioModeAndValue>();
@@ -263,6 +273,20 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     }
 
     private _handleDriverStationEvent(payload: WPILibWSMessages.DriverStationPayload) : void {
+        if (this._inDsPacketTimeoutMode) {
+            this._inDsPacketTimeoutMode = false;
+            this._robot.onDSPacketTimeoutCleared();
+        }
+
+        if (this._dsPacketTimeout) {
+            clearTimeout(this._dsPacketTimeout);
+        }
+
+        this._dsPacketTimeout = setTimeout(() => {
+            this._inDsPacketTimeoutMode = true;
+            this._robot.onDSPacketTimeoutOccurred();
+        }, DS_PACKET_TIMEOUT_MS);
+
         if(payload[">enabled"] !== undefined) {
             this._driverStationEnabled = payload[">enabled"];
                 if(!this._driverStationEnabled) {
