@@ -136,4 +136,15 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
     // decide if they want to handle the events
     public onRobotDisabled(): void {}
     public onRobotEnabled(): void {}
+
+    // Handlers for packet timeouts. When the `onDSPacketTimeoutOccured` handler
+    // is triggered, it indicates that no WebSocket message has been received within
+    // the timeout period. The DS packets are monitored since WPILib robot programs
+    // send one every 20ms. Having a timeout occur could indicate a high latency
+    // connection between a WPILib robot program and a WS robot.
+    //
+    // These are separate from the Connection/Disconnection and Enabled/Disabled
+    // handlers as robot implementations might want to perform different operations
+    public onDSPacketTimeoutOccurred(): void {}
+    public onDSPacketTimeoutCleared(): void {}
 }
