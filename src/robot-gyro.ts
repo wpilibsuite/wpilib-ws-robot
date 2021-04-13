@@ -1,6 +1,6 @@
 export default class RobotGyro {
     private _deviceName: string;
-    private _deviceChannel: number | null = null;
+    private _deviceIndex: number | null = null;
 
     private _rateX: number = 0;
     private _rateY: number = 0;
@@ -12,10 +12,10 @@ export default class RobotGyro {
 
     private _range: number = 1000;
 
-    constructor(name: string, channel?: number) {
+    constructor(name: string, index?: number) {
         this._deviceName = name;
-        if (channel !== undefined) {
-            this._deviceChannel = channel;
+        if (index !== undefined) {
+            this._deviceIndex = index;
         }
     }
 
@@ -31,8 +31,8 @@ export default class RobotGyro {
         return this._deviceName;
     }
 
-    public get channel(): number | null {
-        return this._deviceChannel;
+    public get index(): number | null {
+        return this._deviceIndex;
     }
 
     public get rateX(): number {

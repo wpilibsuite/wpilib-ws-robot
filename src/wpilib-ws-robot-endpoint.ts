@@ -204,7 +204,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
     private _handleReadGyros(): void {
         this._robot.getAllGyros().forEach(gyro => {
             const gyroUpdates: WPILibWSMessages.GyroPayload = {};
-            const deviceIdent = gyro.name + (gyro.channel !== null ? `[${gyro.channel}]` : "");
+            const deviceIdent = gyro.name + (gyro.index !== null ? `[${gyro.index}]` : "");
             const storedGyroValues: IGyroInfo = this._gyroDevices.get(deviceIdent);
 
             // If the currently looked at gyro is un-registered from
@@ -244,7 +244,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             }
 
             if (Object.keys(gyroUpdates).length > 0) {
-                this._wsInterface.gyroUpdateToWpilib(gyro.name, gyro.channel, gyroUpdates);
+                this._wsInterface.gyroUpdateToWpilib(gyro.name, gyro.index, gyroUpdates);
             }
         });
     }
@@ -351,7 +351,16 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
         this._robot.getAllSimDevices().forEach(device => {
             const deviceUpdates: {[key: string]: any} = {};
 
-            const deviceIdent = device.name + (device.channel !== null ? `[${device.channel}]` : "");
+            let deviceIdent: string = device.name;
+            if (device.index !== null) {
+                if (device.channel !== null) {
+                    deviceIdent += `[${device.index},${device.channel}]`;
+                }
+                else {
+                    deviceIdent += `[${device.index}]`;
+                }
+            }
+
             if (!this._simDeviceFields.has(deviceIdent)) {
                 this._simDeviceFields.set(deviceIdent, new Map<string, any>());
             }
@@ -387,7 +396,7 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
             });
 
             if (Object.keys(deviceUpdates).length > 0) {
-                this._wsInterface.simDeviceUpdateToWpilib(device.name, device.channel, deviceUpdates);
+                this._wsInterface.simDeviceUpdateToWpilib(device.name, device.index, device.channel, deviceUpdates);
             }
         });
     }
