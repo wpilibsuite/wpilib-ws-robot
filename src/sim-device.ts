@@ -83,22 +83,31 @@ export default class SimDevice {
     private _fieldNameToIdent: Map<string, string> = new Map<string, string>();
     private _fields: Map<string, any> = new Map<string, any>();
     private _deviceName: string;
+    private _deviceIndex: number | null = null;
     private _deviceChannel: number | null = null;
 
     /**
      * Construct a new SimDevice
      * @param name
-     * @param channel Channel number or null if this is meant to be a singleton device
+     * @param index Device index number or null if this is meant to be a singleton device
      */
-    constructor(name: string, channel?: number) {
+    constructor(name: string, index?: number, channel?: number) {
         this._deviceName = name;
-        if (channel !== undefined ) {
+        if (index !== undefined ) {
+            this._deviceIndex = index;
+        }
+
+        if (channel !== undefined) {
             this._deviceChannel = channel;
         }
     }
 
     public get name(): string {
         return this._deviceName;
+    }
+
+    public get index(): number | null {
+        return this._deviceIndex;
     }
 
     public get channel(): number | null {

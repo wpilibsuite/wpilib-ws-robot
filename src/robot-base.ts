@@ -36,7 +36,16 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
      * @param device
      */
     protected registerSimDevice(device: SimDevice) {
-        const deviceIdent = device.name + (device.channel !== null ? `[${device.channel}]` : "");
+        let deviceIdent: string = device.name;
+        if (device.index !== null) {
+            if (device.channel !== null) {
+                deviceIdent += `[${device.index},${device.channel}]`;
+            }
+            else {
+                deviceIdent += `[${device.index}]`;
+            }
+        }
+
         this._simDevices.set(deviceIdent, device);
     }
 
@@ -82,12 +91,12 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
     }
 
     protected registerGyro(gyro: RobotGyro) {
-        const deviceIdent = gyro.name + (gyro.channel !== null ? `[${gyro.channel}]` : "");
+        const deviceIdent = gyro.name + (gyro.index !== null ? `[${gyro.index}]` : "");
         this._gyros.set(deviceIdent, gyro);
     }
 
-    public getGyro(deviceName: string, deviceChannel: number | null): RobotGyro {
-        const deviceIdent = deviceName + (deviceChannel !== null ? `[${deviceChannel}]` : "");
+    public getGyro(deviceName: string, deviceIndex: number | null): RobotGyro {
+        const deviceIdent = deviceName + (deviceIndex !== null ? `[${deviceIndex}]` : "");
         return this._gyros.get(deviceIdent);
     }
 

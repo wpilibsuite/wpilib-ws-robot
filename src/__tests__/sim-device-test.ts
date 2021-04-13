@@ -31,11 +31,17 @@ describe("SimDevice", () => {
         it("Should return originally set device name and channel", () => {
             const device = new SimDevice("deviceName", 2);
             expect(device.name).toBe("deviceName");
-            expect(device.channel).toBe(2);
+            expect(device.index).toBe(2);
+            expect(device.channel).toBe(null);
 
             const noChannelDevice = new SimDevice("nochDevice");
             expect(noChannelDevice.name).toBe("nochDevice");
-            expect(noChannelDevice.channel).toBeNull();
+            expect(noChannelDevice.index).toBeNull();
+
+            const deviceIdxCh = new SimDevice("deviceIdxCh", 1, 6);
+            expect(deviceIdxCh.name).toBe("deviceIdxCh");
+            expect(deviceIdxCh.index).toBe(1);
+            expect(deviceIdxCh.channel).toBe(6);
         });
 
         it("Should return a list of registered fields", () => {
