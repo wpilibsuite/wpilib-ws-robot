@@ -1,6 +1,6 @@
 {
   "name": "@wpilib/wpilib-ws-robot",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Base library for a WPILib WebSocket robot (Client/Server implementations)",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
