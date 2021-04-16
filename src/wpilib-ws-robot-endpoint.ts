@@ -582,8 +582,8 @@ export default class WPILibWSRobotEndpoint extends EventEmitter {
 
     }
 
-    private _handleSimDeviceEvent(deviceName: string, deviceChannel: number | null, payload: WPILibWSMessages.SimDevicePayload): void {
-        const simDevice: SimDevice = this._robot.getSimDevice(deviceName, deviceChannel);
+    private _handleSimDeviceEvent(deviceName: string, deviceIndex: number | null, deviceChannel: number | null, payload: WPILibWSMessages.SimDevicePayload): void {
+        const simDevice: SimDevice = this._robot.getSimDevice(deviceName, deviceIndex, deviceChannel);
         if (!simDevice) {
             return;
         }

@@ -54,8 +54,17 @@ export default abstract class WPILibWSRobotBase extends EventEmitter {
      * @param deviceName
      * @param deviceChannel
      */
-    public getSimDevice(deviceName: string, deviceChannel: number | null): SimDevice {
-        const deviceIdent = deviceName + (deviceChannel !== null ? `[${deviceChannel}]` : "");
+    public getSimDevice(deviceName: string, deviceIndex: number | null, deviceChannel: number | null): SimDevice {
+        let deviceIdent: string = deviceName;
+        if (deviceIndex !== null) {
+            if (deviceChannel !== null) {
+                deviceIdent += `[${deviceIndex},${deviceChannel}]`;
+            }
+            else {
+                deviceIdent += `[${deviceIndex}]`;
+            }
+        }
+
         return this._simDevices.get(deviceIdent);
     }
 
